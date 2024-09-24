@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Calibration App</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Meta Tags for Responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Custom Styles -->
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding-top: 70px;
+            padding-bottom: 70px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        /* Fixed Header */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+        }
+
+        /* Fixed Footer */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        /* Content Adjustments */
+        .container {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Navigation */
+        .navbar-nav .nav-item .nav-link {
+            color: white;
+        }
+
+        .navbar-nav .nav-item.active .nav-link {
+            color: #ffcc00;
+        }
+
+        /* Buttons */
+        button {
+            margin: 10px 0;
+        }
+
+        /* Calibration Table */
+        .table-responsive {
+            margin-top: 20px;
+        }
+
+        /* Live Summary Panel */
+        .card {
+            margin-top: 20px;
+        }
+
+        /* Results Page Chart */
+        #errorChart {
+            max-width: 100%;
+            height: 400px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 60px;
+                padding-bottom: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Calibration App</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Navigation Links -->
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#" data-section="setup"><i class="fas fa-cogs"></i> Setup</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="calibration"><i class="fas fa-table"></i> Calibration</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="results"><i class="fas fa-chart-line"></i> Results</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Setup Section -->
+    <div id="setup-section" class="container section">
+        <h2 class="mb-4"><i class="fas fa-cogs"></i> Calibration Setup</h2>
+        <form id="setup-form">
+            <!-- Calibration Mode -->
+            <div class="form-group">
+                <label for="calibration-type">Calibration Mode:</label>
+                <select id="calibration-type" class="form-control" required>
+                    <option value="Tension">Tension</option>
+                    <option value="Compression">Compression</option>
+                    <option value="Tension/Compression">Tension/Compression</option>
+                </select>
+            </div>
+            <!-- Capacity -->
+            <div class="form-group">
+                <label for="capacity">Capacity (N):</label>
+                <input type="number" id="capacity" class="form-control" min="0" step="0.01" placeholder="e.g., 1000" required>
+            </div>
+            <!-- System ID -->
+            <div class="form-group">
+                <label for="system-id">System ID:</label>
+                <input type="text" id="system-id" class="form-control" placeholder="e.g., LC-12345" required>
+            </div>
+            <!-- Gravity -->
+            <div class="form-group">
+                <label for="gravity-select">Select Gravity by Location:</label>
+                <select id="gravity-select" class="form-control" required>
+                    <!-- Options will be dynamically populated -->
+                </select>
+            </div>
+            <!-- Resolution -->
+            <div class="form-group">
+                <label for="resolution">Resolution (N):</label>
+                <input type="number" id="resolution" class="form-control" min="0" step="0.0001" placeholder="e.g., 0.01" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Setup</button>
+        </form>
+    </div>
+
+    <!-- Calibration Section -->
+    <div id="calibration-section" class="container section" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-table"></i> Calibration Table</h2>
+            <!-- Run Selection Dropdown -->
+            <div class="form-inline">
+                <label for="run-selection" class="mr-2">Select Run:</label>
+                <select id="run-selection" class="form-control">
+                    <!-- Options will be dynamically added -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Unit Selection -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="mass-unit-select">Mass Unit:</label>
+                <select id="mass-unit-select" class="form-control">
+                    <option value="kg" selected>kg</option>
+                    <option value="g">g</option>
+                    <option value="lb">lb</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="force-unit-select">Force Unit:</label>
+                <select id="force-unit-select" class="form-control">
+                    <option value="N" selected>N</option>
+                    <option value="kN">kN</option>
+                    <option value="lbf">lbf</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="calibration-table" class="table table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Point</th>
+                        <th>% of Range</th>
+                        <th>Suggested Mass</th>
+                        <!-- Input Fields -->
+                        <th>Added Mass</th>
+                        <th>Indicated Force</th>
+                        <!-- Results -->
+                        <th>Added Force</th>
+                        <th>Error (%)</th>
+                        <th>Error Class</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be dynamically added here -->
+                </tbody>
+            </table>
+        </div>
+        <button id="save-calibration" class="btn btn-success mt-3" disabled><i class="fas fa-save"></i> Save Calibration</button>
+
+        <!-- Live Summary Panel -->
+        <div class="card mt-5">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-line"></i> Live Calibration Summary</h5>
+                <p class="card-text"><strong>Running Average Error:</strong> <span id="average-error">0.0000</span>%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results-section" class="container section" style="display: none;">
+        <!-- Final Calibration Summary -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-clipboard-check"></i> Final Calibration Summary</h5>
+                <p class="card-text"><strong>Final Mean Error:</strong> <span id="final-mean-error">0.0000</span>%</p>
+                <p class="card-text"><strong>System Class:</strong> <span id="final-system-class">N/A</span></p>
+                <p class="card-text"><strong>Repeatability:</strong> <span id="final-repeatability">0.0000</span>%</p>
+                <p class="card-text"><strong>Resolution:</strong> <span id="final-resolution">N/A</span> N</p>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-line"></i> Calibration Error Trend</h5>
+                <canvas id="errorChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="text-center mb-5">
+            <button id="export-csv-btn" class="btn btn-info mr-2"><i class="fas fa-file-csv"></i> Export to CSV</button>
+            <button id="export-pdf-btn" class="btn btn-danger mr-2"><i class="fas fa-file-pdf"></i> Export to PDF</button>
+            <button id="export-excel-btn" class="btn btn-success"><i class="fas fa-file-excel"></i> Export to Excel</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white">
+        <div class="container py-3 text-center">
+            <p>&copy; 2024 Nils Johansson. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <!-- Popper.js and Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Font Awesome JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+        // Variables to hold calibration setup details and calibration data
+        let setupData = {};
+        let calibrationData = [];
+        let currentRun = 1;
+        const totalRuns = 3;
+
+        // List of gravity values by country and region
+        const gravityData = [
+            { country: "Australia", region: "Adelaide", gravity: 9.797 },
+            // ... (Include all the gravity data provided)
+            { country: "Vietnam", region: "", gravity: 9.7822 }
+        ];
+
+        // Unit conversion factors
+        const massUnits = {
+            "kg": 1,
+            "g": 0.001,
+            "lb": 0.45359237
+        };
+
+        const forceUnits = {
+            "N": 1,
+            "kN": 1000,
+            "lbf": 4.4482216152605
+        };
+
+        // Helper function to round numbers to specified decimal places
+        function roundTo(value, decimals) {
+            return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
+        }
+
+        // Function to save setup data from the Setup page
+        function saveSetup(event) {
+            event.preventDefault(); // Prevent form submission
+
+            // Retrieve input values
+            const calibrationType = document.getElementById('calibration-type').value.trim();
+            const capacity = parseFloat(document.getElementById('capacity').value);
+            const systemId = document.getElementById('system-id').value.trim();
+            const gravitySelect = document.getElementById('gravity-select');
+            const gravity = parseFloat(gravitySelect.options[gravitySelect.selectedIndex].dataset.gravity);
+            const location = gravitySelect.value;
+            const resolution = parseFloat(document.getElementById('resolution').value);
+
+            // Basic validation
+            if (!calibrationType || isNaN(capacity) || !systemId || isNaN(gravity) || isNaN(resolution)) {
+                alert('Please fill in all the fields with valid data.');
+                return;
+            }
+
+            // Assign to setupData object
+            setupData = {
+                type: calibrationType,
+                capacity: capacity,
+                systemId: systemId,
+                gravity: gravity,
+                location: location,
+                resolution: resolution
+            };
+
+            // Initialize calibrationData array with empty runs
+            calibrationData = [];
+            for (let i = 0; i < totalRuns; i++) {
+                calibrationData.push({
+                    run: i + 1,
+                    points: []
+                });
+            }
+
+            // Store setup data and calibration data in localStorage
+            localStorage.setItem('setupData', JSON.stringify(setupData));
+            localStorage.setItem('calibrationData', JSON.stringify(calibrationData));
+            localStorage.setItem('currentRun', '1');
+
+            alert('Setup Saved Successfully! Proceeding to Calibration Table.');
+            showSection('calibration'); // Navigate to Calibration section
+        }
+
+        // Function to populate gravity selection dropdown
+        function populateGravitySelection() {
+            const gravitySelect = document.getElementById('gravity-select');
+            gravitySelect.innerHTML = '';
+
+            gravityData.forEach(item => {
+                const option = document.createElement('option');
+                option.value = `${item.country} - ${item.region}`.trim();
+                option.textContent = `${item.country} - ${item.region}`.trim() || item.country;
+                option.dataset.gravity = item.gravity;
+                gravitySelect.appendChild(option);
+            });
+        }
+
+        // Function to initialize the Setup page
+        function initializeSetupPage() {
+            populateGravitySelection();
+            const setupForm = document.getElementById('setup-form');
+            setupForm.addEventListener('submit', saveSetup);
+
+            // Pre-fill the form if setup data exists
+            const storedSetup = localStorage.getItem('setupData');
+            if (storedSetup) {
+                setupData = JSON.parse(storedSetup);
+                document.getElementById('calibration-type').value = setupData.type;
+                document.getElementById('capacity').value = setupData.capacity;
+                document.getElementById('system-id').value = setupData.systemId;
+                document.getElementById('resolution').value = setupData.resolution;
+
+                // Set the selected gravity
+                const gravitySelect = document.getElementById('gravity-select');
+                for (let i = 0; i < gravitySelect.options.length; i++) {
+                    if (gravitySelect.options[i].value === setupData.location) {
+                        gravitySelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Function to initialize the Calibration Table page
+        function initializeCalibrationPage() {
+            // Retrieve calibration data from localStorage if available
+            const storedCalibration = localStorage.getItem('calibrationData');
+            if (storedCalibration) {
+                calibrationData = JSON.parse(storedCalibration);
+            } else {
+                // Initialize calibrationData array with empty runs
+                calibrationData = [];
+                for (let i = 0; i < totalRuns; i++) {
+                    calibrationData.push({
+                        run: i + 1,
+                        points: []
+                    });
+                }
+                localStorage.setItem('calibrationData', JSON.stringify(calibrationData));
+            }
+
+            // Initialize currentRun from localStorage or default to 1
+            const storedCurrentRun = localStorage.getItem('currentRun');
+            currentRun = storedCurrentRun ? parseInt(storedCurrentRun) : 1;
+
+            // Populate run selection dropdown
+            populateRunSelection();
+
+            initCalibrationTable();
+            attachSaveButtonListener();
+            attachRunSelectionListener();
+            attachUnitChangeListeners();
+        }
+
+        // Function to populate run selection dropdown
+        function populateRunSelection() {
+            const runSelection = document.getElementById('run-selection');
+            runSelection.innerHTML = '';
+            for (let i = 1; i <= totalRuns; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Run ${i}`;
+                if (i === currentRun) {
+                    option.selected = true;
+                }
+                runSelection.appendChild(option);
+            }
+        }
+
+        // Function to handle run selection change
+        function attachRunSelectionListener() {
+            const runSelection = document.getElementById('run-selection');
+            runSelection.addEventListener('change', function () {
+                currentRun = parseInt(this.value);
+                localStorage.setItem('currentRun', currentRun);
+                initCalibrationTable();
+            });
+        }
+
+        // Function to initialize the Calibration Table
+        function initCalibrationTable() {
+            // Retrieve setup data from localStorage
+            const storedSetup = localStorage.getItem('setupData');
+            if (storedSetup) {
+                setupData = JSON.parse(storedSetup);
+            } else {
+                alert('No setup data found. Please complete the Setup first.');
+                showSection('setup'); // Navigate to Setup section
+                return;
+            }
+
+            // Update Run header
+            const runHeader = document.querySelector('#calibration-section h2');
+            runHeader.textContent = `Calibration Table - Run ${currentRun} of ${totalRuns}`;
+
+            // Initialize the calibration table
+            const tableBody = document.querySelector("#calibration-table tbody");
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            // Get selected units
+            const massUnit = document.getElementById('mass-unit-select').value;
+            const forceUnit = document.getElementById('force-unit-select').value;
+
+            // Use the specified calibration percentages
+            const percentages = [0, 2, 4, 7, 10, 20, 40, 60, 80, 100];
+
+            // Create table rows
+            percentages.forEach((percentage, index) => {
+                const suggestedForce_N = setupData.capacity * (percentage / 100);
+                const suggestedMass_kg = suggestedForce_N / setupData.gravity;
+
+                // Convert suggested mass to selected unit
+                const suggestedMass = suggestedMass_kg / massUnits[massUnit];
+
+                // Create a new table row
+                let row = document.createElement('tr');
+
+                // Populate row with cells
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${percentage}%</td>
+                    <!-- Suggested Mass with Unit -->
+                    <td>
+                        <span class="suggested-mass">${roundTo(suggestedMass, 4)}</span> ${massUnit}
+                    </td>
+                    <!-- Added Mass -->
+                    <td>
+                        <input 
+                            type="number" 
+                            class="added-mass form-control" 
+                            data-row="${index + 1}" 
+                            min="0" 
+                            step="any" 
+                            inputmode="decimal" 
+                            placeholder="e.g., ${roundTo(suggestedMass, 4)}" 
+                            title="Enter the mass added"
+                        >
+                    </td>
+                    <!-- Indicated Force -->
+                    <td>
+                        <input 
+                            type="number" 
+                            class="indicated-force form-control" 
+                            data-row="${index + 1}" 
+                            min="0" 
+                            step="any" 
+                            inputmode="decimal" 
+                            placeholder="e.g., ${roundTo(suggestedForce_N / forceUnits[forceUnit], 4)}" 
+                            title="Enter the indicated force measured by the system"
+                        >
+                    </td>
+                    <!-- Results -->
+                    <td class="added-force">0.0000</td>
+                    <td class="error">0.0000</td>
+                    <td class="error-class">N/A</td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // Load data for the current run
+            loadCalibrationData();
+
+            // Add event listeners to input fields
+            addTableEventListeners();
+        }
+
+        // Function to load calibration data for the current run
+        function loadCalibrationData() {
+            const tableBody = document.querySelector("#calibration-table tbody");
+            const currentRunData = calibrationData[currentRun - 1].points;
+
+            if (currentRunData && currentRunData.length > 0) {
+                currentRunData.forEach(point => {
+                    const row = tableBody.rows[point.point - 1];
+                    if (row) {
+                        row.querySelector('.added-mass').value = point.addedMassDisplay;
+                        row.querySelector('.indicated-force').value = point.indicatedForceDisplay;
+                    }
+                });
+                calculateValues(); // Perform calculations based on existing data
+            } else {
+                // Clear inputs and calculated values if no data exists
+                const rows = tableBody.querySelectorAll("tr");
+                rows.forEach(row => {
+                    row.querySelector('.added-mass').value = '';
+                    row.querySelector('.indicated-force').value = '';
+                    row.querySelector('.added-force').textContent = '0.0000';
+                    row.querySelector('.error').textContent = '0.0000';
+                    row.querySelector('.error-class').textContent = 'N/A';
+                });
+            }
+        }
+
+        // Function to perform calculations and update results
+        function calculateValues() {
+            const tableBody = document.querySelector("#calibration-table tbody");
+            const rows = tableBody.querySelectorAll("tr");
+            let totalError = 0;
+            let validErrorCount = 0;
+            let allFieldsFilled = true;
+
+            // Get selected units
+            const massUnit = document.getElementById('mass-unit-select').value;
+            const forceUnit = document.getElementById('force-unit-select').value;
+
+            rows.forEach(row => {
+                // Retrieve input values
+                const addedMassInput = row.querySelector('.added-mass');
+                const indicatedForceInput = row.querySelector('.indicated-force');
+
+                let addedMassDisplay = parseFloat(addedMassInput.value);
+                let indicatedForceDisplay = parseFloat(indicatedForceInput.value);
+                const gravity = setupData.gravity;
+
+                // Check if inputs are filled
+                if (isNaN(addedMassDisplay) || isNaN(indicatedForceDisplay)) {
+                    // Clear calculated fields if inputs are invalid
+                    row.querySelector('.added-force').textContent = '0.0000';
+                    row.querySelector('.error').textContent = '0.0000';
+                    row.querySelector('.error-class').textContent = 'N/A';
+                    allFieldsFilled = false;
+                    return; // Skip this row
+                }
+
+                // Convert added mass to kg
+                let addedMass_kg = addedMassDisplay * massUnits[massUnit];
+
+                // Convert indicated force to N
+                let indicatedForce_N = indicatedForceDisplay * forceUnits[forceUnit];
+
+                // Round input values to 4 decimal places
+                addedMass_kg = roundTo(addedMass_kg, 4);
+                indicatedForce_N = roundTo(indicatedForce_N, 4);
+
+                // Calculate Added Force in N using the provided gravity
+                const addedForce_N = roundTo(addedMass_kg * gravity, 4);
+
+                // Display Added Force in selected force unit
+                const addedForceDisplay = addedForce_N / forceUnits[forceUnit];
+                row.querySelector('.added-force').textContent = roundTo(addedForceDisplay, 4).toFixed(4);
+
+                // Calculate Error (%)
+                let error = 0;
+                if (addedForce_N !== 0) {
+                    error = roundTo(((indicatedForce_N - addedForce_N) / addedForce_N) * 100, 4);
+                    totalError += error;
+                    validErrorCount++;
+                }
+                row.querySelector('.error').textContent = error.toFixed(4);
+
+                // Determine Error Class
+                const absError = Math.abs(error);
+                let errorClass = 'Fail';
+                if (absError <= 0.5) {
+                    errorClass = 'Class 0.5';
+                } else if (absError <= 1.0) {
+                    errorClass = 'Class 1';
+                } else if (absError <= 2.0) {
+                    errorClass = 'Class 2';
+                }
+                row.querySelector('.error-class').textContent = errorClass;
+            });
+
+            // Update Live Summary
+            const averageError = validErrorCount > 0 ? roundTo(totalError / validErrorCount, 4) : 0.0000;
+            document.getElementById('average-error').textContent = averageError.toFixed(4);
+
+            // Enable or disable save button based on completion
+            const saveBtn = document.getElementById('save-calibration');
+            saveBtn.disabled = !allFieldsFilled;
+        }
+
+        // Function to add event listeners to input fields for real-time calculations
+        function addTableEventListeners() {
+            const tableBody = document.querySelector("#calibration-table tbody");
+            tableBody.addEventListener('input', function(event) {
+                if (
+                    event.target.classList.contains('added-mass') ||
+                    event.target.classList.contains('indicated-force')
+                ) {
+                    calculateValues();
+                }
+            });
+        }
+
+        // Function to handle unit changes
+        function attachUnitChangeListeners() {
+            const massUnitSelect = document.getElementById('mass-unit-select');
+            const forceUnitSelect = document.getElementById('force-unit-select');
+
+            massUnitSelect.addEventListener('change', function() {
+                initCalibrationTable();
+                calculateValues();
+            });
+
+            forceUnitSelect.addEventListener('change', function() {
+                initCalibrationTable();
+                calculateValues();
+            });
+        }
+
+        // Function to save calibration data for the current run
+        function saveCalibrationData() {
+            // Ensure that all fields are filled
+            if (document.getElementById('save-calibration').disabled) {
+                alert('Please complete all required fields before saving.');
+                return;
+            }
+
+            const tableBody = document.querySelector("#calibration-table tbody");
+            const rows = tableBody.querySelectorAll("tr");
+            const runData = {
+                run: currentRun,
+                points: []
+            };
+
+            // Get selected units
+            const massUnit = document.getElementById('mass-unit-select').value;
+            const forceUnit = document.getElementById('force-unit-select').value;
+
+            rows.forEach((row, index) => {
+                const addedMassInput = row.querySelector('.added-mass');
+                const indicatedForceInput = row.querySelector('.indicated-force');
+
+                const pointData = {
+                    point: index + 1,
+                    percentage: parseFloat(row.cells[1].textContent.replace('%', '')),
+                    suggestedMass: parseFloat(row.querySelector('.suggested-mass').textContent),
+                    massUnit: massUnit,
+                    forceUnit: forceUnit,
+                    addedMassDisplay: parseFloat(addedMassInput.value) || 0,
+                    indicatedForceDisplay: parseFloat(indicatedForceInput.value) || 0,
+                    addedForce: parseFloat(row.querySelector('.added-force').textContent) || 0,
+                    error: parseFloat(row.querySelector('.error').textContent) || 0,
+                    errorClass: row.querySelector('.error-class').textContent
+                };
+                runData.points.push(pointData);
+            });
+
+            // Update calibrationData array
+            calibrationData[currentRun - 1] = runData;
+
+            // Save updated calibrationData to localStorage
+            localStorage.setItem('calibrationData', JSON.stringify(calibrationData));
+
+            // Update current run in localStorage
+            localStorage.setItem('currentRun', currentRun);
+
+            alert(`Calibration Data for Run ${currentRun} Saved Successfully!`);
+        }
+
+        // Function to attach Save Calibration button listener
+        function attachSaveButtonListener() {
+            const saveBtn = document.getElementById('save-calibration');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', saveCalibrationData);
+            }
+        }
+
+        // Function to initialize the Results page
+        function initializeResultsPage() {
+            if (document.getElementById('errorChart')) {
+                // Retrieve calibration data from localStorage
+                const storedSetup = localStorage.getItem('setupData');
+                const storedCalibration = localStorage.getItem('calibrationData');
+
+                if (!storedSetup || !storedCalibration) {
+                    alert('No calibration data found. Please complete the calibration first.');
+                    showSection('setup'); // Navigate to the Setup section
+                    return;
+                }
+
+                setupData = JSON.parse(storedSetup);
+                calibrationData = JSON.parse(storedCalibration);
+
+                // Calculate final mean error, system class, repeatability, resolution
+                const summary = calculateFinalSummary();
+
+                // Update the summary fields on the page
+                document.getElementById('final-mean-error').textContent = summary.meanError.toFixed(4);
+                document.getElementById('final-system-class').textContent = summary.systemClass;
+                document.getElementById('final-repeatability').textContent = summary.repeatability.toFixed(4);
+                document.getElementById('final-resolution').textContent = setupData.resolution.toFixed(4);
+
+                // Generate the chart
+                generateErrorChart();
+            }
+        }
+
+        function calculateFinalSummary() {
+            let totalError = 0;
+            let totalPoints = 0;
+            let errorsByRun = [];
+
+            calibrationData.forEach(runData => {
+                let runErrors = [];
+                runData.points.forEach(point => {
+                    totalError += Math.abs(point.error);
+                    totalPoints += 1;
+                    runErrors.push(point.error);
+                });
+                errorsByRun.push(runErrors);
+            });
+
+            const meanError = totalPoints > 0 ? totalError / totalPoints : 0.0;
+
+            // Determine system class based on the maximum absolute error
+            let maxAbsError = 0;
+            calibrationData.forEach(runData => {
+                runData.points.forEach(point => {
+                    const absError = Math.abs(point.error);
+                    if (absError > maxAbsError) {
+                        maxAbsError = absError;
+                    }
+                });
+            });
+            let systemClass = 'Fail';
+            if (maxAbsError <= 0.5) {
+                systemClass = 'Class 0.5';
+            } else if (maxAbsError <= 1.0) {
+                systemClass = 'Class 1';
+            } else if (maxAbsError <= 2.0) {
+                systemClass = 'Class 2';
+            }
+
+            // Calculate repeatability (standard deviation of errors)
+            let allErrors = [];
+            calibrationData.forEach(runData => {
+                runData.points.forEach(point => {
+                    allErrors.push(point.error);
+                });
+            });
+            const repeatability = calculateStandardDeviation(allErrors);
+
+            return {
+                meanError: meanError,
+                systemClass: systemClass,
+                repeatability: repeatability
+            };
+        }
+
+        function calculateStandardDeviation(values) {
+            const n = values.length;
+            if (n === 0) return 0.0;
+            const mean = values.reduce((a, b) => a + b, 0) / n;
+            const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / n;
+            return Math.sqrt(variance);
+        }
+
+        function generateErrorChart() {
+            const ctx = document.getElementById('errorChart').getContext('2d');
+            const datasets = [];
+            const colors = ['red', 'green', 'blue', 'orange', 'purple', 'cyan', 'magenta'];
+
+            calibrationData.forEach((runData, index) => {
+                const runNumber = runData.run;
+                const labels = runData.points.map(point => point.percentage);
+                const data = runData.points.map(point => point.error);
+                datasets.push({
+                    label: `Run ${runNumber}`,
+                    data: data,
+                    fill: false,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length],
+                    borderDash: [5, 5], // dotted line
+                    pointStyle: 'circle',
+                    tension: 0, // straight lines
+                });
+            });
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: calibrationData[0].points.map(point => point.percentage + '%'),
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '% of Range'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Error (%)'
+                            }
+                        }
+                    },
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Calibration Error Trend'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Navigation functions
+        function initializeNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link[data-section]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const section = this.getAttribute('data-section');
+                    showSection(section);
+                });
+            });
+        }
+
+        function showSection(sectionId) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(section => {
+                if (section.id === sectionId + '-section') {
+                    section.style.display = 'block';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+
+            // Update active class on nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const link = item.querySelector('.nav-link');
+                if (link && link.getAttribute('data-section') === sectionId) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Initialize the appropriate page functions
+            if (sectionId === 'setup') {
+                initializeSetupPage();
+            } else if (sectionId === 'calibration') {
+                initializeCalibrationPage();
+            } else if (sectionId === 'results') {
+                initializeResultsPage();
+            }
+        }
+
+        // Document Ready - Initialize appropriate page functions
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeNavigation();
+            showSection('setup'); // Start with the Setup section
+        });
+    </script>
+</body>
+</html>
